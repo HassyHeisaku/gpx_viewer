@@ -20,22 +20,8 @@ class FitFileReader
     @record_header_structure = [
       [:reserved, 'C',1],
       [:architecture, 'C',1], #0:little endian, 1:big endian. This time little endian only
-      [:global_message_number, 'v',2], # treat field_id in this version.
-# on my fit sample, used message numbers are
+      [:global_message_number, 'v',2], # on my fit sample, used message numbers are
 # file_id 0 (1 record), file_creator	49 (1),timestamp_correlation	162 (1),device_info	23 (3), record	20 (2351), event	21 (3),lap	19 (3),session	18 (1),activity	34(1)
-# file_id	0, capabilities	1, device_settings	2, user_profile	3, hrm_profile	4, sdm_profile	5
-# bike_profile	6, zones_target	7, hr_zone	8, power_zone	9, met_zone	10, sport	12, goal	15
-# session	18, lap	19, record	20, event	21, device_info	23, workout	26, workout_step	27, schedule	28
-# weight_scale	30, course	31, course_point	32, totals	33, activity	34, software	35, file_capabilities	37
-# mesg_capabilities	38, field_capabilities	39, file_creator	49, blood_pressure	51, speed_zone	53, monitoring	55
-# training_file	72, hrv	78, ant_rx	80, ant_tx	81, ant_channel_id	82, length	101, monitoring_info	103, pad	105
-# slave_device	106, connectivity	127, weather_conditions	128, weather_alert	129, cadence_zone	131, hr	132, segment_lap	142
-# memo_glob	145, segment_id	148, segment_leaderboard_entry	149, segment_point	150, segment_file	151, workout_session	158, watchface_settings	159
-# gps_metadata	160, camera_event	161, timestamp_correlation	162, gyroscope_data	164, accelerometer_data	165, three_d_sensor_calibration	167
-# video_frame	169, obdii_data	174, nmea_sentence	177, aviation_attitude	178, video	184, video_title	185, video_description	186, video_clip	187
-# ohr_settings	188, exd_screen_configuration	200, exd_data_field_configuration	201, exd_data_concept_configuration	202, field_description	206
-# developer_data_id	207, magnetometer_data	208, barometer_data	209, one_d_sensor_calibration	210, set	225, stress_level	227, dive_settings	258
-# dive_gas	259, dive_alarm	262, exercise_title	264 dive_summary	268
       [:fields, 'c',1],
     ]
     @rec_head ={}
@@ -45,7 +31,8 @@ class FitFileReader
       [:size, 'C',1], #byte
       [:base_type, 'C',1],
     ]
-@rec_counts = {}
+    @record_log = []
+    @rec_counts = {}
     parse(@header_structure,@header)
     while(@logfile.eof != true) do
       parse(@record_first_byte,@rec_head)
@@ -65,7 +52,7 @@ class FitFileReader
         if(rec_id == 5)
           pp [rec_id, @record_def[rec_id]]
         else
-          pp [rec_id, @record_def[rec_id][:global_message_number]]
+#          pp [rec_id, @record_def[rec_id][:global_message_number]]
         end
 #        puts "definition end"
       else
@@ -76,22 +63,27 @@ class FitFileReader
           break
         else
 #          pp @record_def[@rec_head[:normal_header]][:rec_size]
-          yomitobashi(@record_def[@rec_head[:normal_header]][:rec_size])
-          @rec_counts[@rec_head[:normal_header]] = @rec_counts[@rec_head[:normal_header]] + 1 
+          if(@record_def[@rec_head[:normal_header]][:global_message_number] == 20)
+            parse_record_field(@record_def[@rec_head[:normal_header]][:rec_size], @record_log)
+          else
+            yomitobashi(@record_def[@rec_head[:normal_header]][:rec_size])
+            @rec_counts[@rec_head[:normal_header]] = @rec_counts[@rec_head[:normal_header]] + 1 
+          end
         end
       end
     end
   pp @rec_counts
   end
   def yomitobashi(size)
-    a = @logfile.read(size)
-    if(size == 43)
-      b = a.unpack("VVVC20vvvvCCC")
-#      pp b.shift(3)
-#      pp b.pack("c20")
-#      b.shift(20)
-#      pp b
-    end
+    @logfile.read(size)
+  end
+  def parse_record_field(size, log)  # for global message number 20
+    a = @logfile.read(size).unpack("L<l<l<L<L<S<S<S<s<s<CCcCCCCC")
+#    tmp = Hash[*[253,0,1,5,29,2,6,7,9,33,3,4,13,30,43,44,45,46].zip(a).flatten(1)]
+    tmp = Hash[*[:timestamp,:position_lat,:position_long,:distance,:accumulated_power,:altitude,:speed,:power,:grade,:calories,:heart_rate,:cadence,:temperature,:left_right_balance,:left_torque_effectiveness,:right_torque_effectiveness,:left_pedal_smoothness,:right_pedal_smoothness].zip(a).flatten(1)]
+pp a
+#    pp tmp[:position_long]
+    log.push(tmp)
   end
   def parse(struct, result)
     unpack_string = struct.map{|v| v[1]}.join
@@ -107,5 +99,4 @@ class FitFileReader
   def get_record(key)
     @header[key]
   end
-
 end
