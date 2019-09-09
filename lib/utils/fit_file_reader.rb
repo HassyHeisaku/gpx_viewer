@@ -21,6 +21,8 @@ class FitFileReader
       [:reserved, 'C',1],
       [:architecture, 'C',1], #0:little endian, 1:big endian. This time little endian only
       [:global_message_number, 'v',2], # treat field_id in this version.
+# on my fit sample, used message numbers are
+# file_id 0 (1 record), file_creator	49 (1),timestamp_correlation	162 (1),device_info	23 (3), record	20 (2351), event	21 (3),lap	19 (3),session	18 (1),activity	34(1)
 # file_id	0, capabilities	1, device_settings	2, user_profile	3, hrm_profile	4, sdm_profile	5
 # bike_profile	6, zones_target	7, hr_zone	8, power_zone	9, met_zone	10, sport	12, goal	15
 # session	18, lap	19, record	20, event	21, device_info	23, workout	26, workout_step	27, schedule	28
@@ -43,8 +45,9 @@ class FitFileReader
       [:size, 'C',1], #byte
       [:base_type, 'C',1],
     ]
+@rec_counts = {}
     parse(@header_structure,@header)
-    (1..20).each do 
+    while(@logfile.eof != true) do
       parse(@record_first_byte,@rec_head)
       if(@rec_head[:normal_header] & 0x40 !=0) # num[pos] !=0 will work also.
         rec_id = @rec_head[:normal_header] ^ 0x40
@@ -56,26 +59,38 @@ class FitFileReader
           parse(@record_definition,@record_def[rec_id][:def][i])
         end
         @record_def[rec_id][:rec_size] = @record_def[rec_id][:def].map{|r| r[:size]}.inject(:+)
-        puts "definition"
-        pp rec_id.to_s(16)
-        pp @record_def[rec_id]
-        puts "definition end"
+#        puts "definition"
+#        pp rec_id.to_s(16)
+        @rec_counts[rec_id]=0
+        if(rec_id == 5)
+          pp [rec_id, @record_def[rec_id]]
+        else
+          pp [rec_id, @record_def[rec_id][:global_message_number]]
+        end
+#        puts "definition end"
       else
-        puts "data"
-        pp @rec_head[:normal_header].to_s(16)
-        pp @record_def[@rec_head[:normal_header]][:rec_size]
-        yomitobashi(@record_def[@rec_head[:normal_header]][:rec_size])
+#        puts "data"
+#        pp @rec_head[:normal_header].to_s(16)
+        if(@record_def[@rec_head[:normal_header]] == nil)
+#          pp "no_record\n"
+          break
+        else
+#          pp @record_def[@rec_head[:normal_header]][:rec_size]
+          yomitobashi(@record_def[@rec_head[:normal_header]][:rec_size])
+          @rec_counts[@rec_head[:normal_header]] = @rec_counts[@rec_head[:normal_header]] + 1 
+        end
       end
     end
+  pp @rec_counts
   end
   def yomitobashi(size)
     a = @logfile.read(size)
     if(size == 43)
       b = a.unpack("VVVC20vvvvCCC")
-      pp b.shift(3)
-      pp b.pack("c20")
-      b.shift(20)
-      pp b
+#      pp b.shift(3)
+#      pp b.pack("c20")
+#      b.shift(20)
+#      pp b
     end
   end
   def parse(struct, result)
