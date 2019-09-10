@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 # Fit file definition can be download from
 # https://www.thisisant.com/developer/resources/software-tools/
+# So far, this version retrieve "record" from fit file, then convert to [lat,long]
 
 require 'time'
+require 'json'
 
 class FitFileReader
   def initialize(file_name)
@@ -34,23 +36,22 @@ class FitFileReader
       [:base_type, 'C',1],
     ]
     @record_log = []
-    @rec_counts = {}
     @fields_definition = {
       5 => 
       {
         253 => {:name => :timestamp, :func => lambda{|value| Time.at(628473600 + value).to_s } },
-         0 => {:name => :position_lat, :func => lambda{|value| value * ( 180.0 / (2**31) ) } }, # semicircles to degree
-         1 => {:name => :position_long, :func => lambda{|value| value * ( 180.0 / (2**31) ) } },
-         5 => {:name => :distance, :func => lambda {|value| value/100.0}},
-         29 => {:name => :accumulated_power, :func => lambda{|value| (value == 0xffffffff)? "na":value}},
-         2 => {:name => :altitude, :func => lambda{|value| value/5.0 - 500.0}},
-         6 => {:name => :speed, :func => lambda{|value| value/1000000.0 * 60 * 60}}, #km/h
-         7 => {:name => :power, :func => lambda{|value| (value == 0xffff)? "na": value}}, 
-         9 => {:name => :grade, :func => lambda{|value| (value == 0x7fff)? "na": value/100.0}}, 
-         33 => {:name => :calories,}, 
-         3 => {:name => :heart_rate, }, 
-         4 => {:name => :cadence, }, 
-         13 => {:name => :temperature, }, 
+         0 => {:name => :position_lat, :func => lambda{|value| (value == 0x7fffffff)? "na" : value * ( 180.0 / (2**31) ) } }, # semicircles to degree
+         1 => {:name => :position_long, :func => lambda{|value|(value == 0x7fffffff)? "na" : value * ( 180.0 / (2**31) ) } },
+         5 => {:name => :distance, :func => lambda {|value| (value == 0xffffffff)? "na" : value/100.0}},
+         29 => {:name => :accumulated_power, :func => lambda{|value| (value == 0xffffffff)? "na" : value}},
+         2 => {:name => :altitude, :func => lambda{|value| (value == 0xffff)? "na" : value/5.0 - 500.0}},
+         6 => {:name => :speed, :func => lambda{|value| (value == 0xffff)? "na" : value/1000000.0 * 60 * 60}}, #km/h
+         7 => {:name => :power, :func => lambda{|value| (value == 0xffff)? "na" : value}}, 
+         9 => {:name => :grade, :func => lambda{|value| (value == 0x7fff)? "na" : value/100.0}}, 
+         33 => {:name => :calories, :func => lambda{|value| (value == -1)? "na" : value}}, 
+         3 => {:name => :heart_rate, :func => lambda{|value| (value == 0xff)? "na" : value}}, 
+         4 => {:name => :cadence, :func => lambda{|value| (value == 0xff)? "na" : value}}, 
+         13 => {:name => :temperature, :func => lambda{|value| (value == 0x7f)? "na" : value}}, 
          30 => {:name => :left_right_balance, :func => lambda{|value| (value == 0xff)? "na": value}}, 
          43 => {:name => :left_torque_effectiveness, :func => lambda{|value| (value == 0xff)? "na": value/2.0}}, 
          44 => {:name => :right_torque_effectiveness, :func => lambda{|value| (value == 0xff)? "na": value/2.0}}, 
@@ -64,7 +65,9 @@ class FitFileReader
     rec.keys.each do |k|
       if(@fields_definition[5].has_key?(k))
         tmp = (@fields_definition[5][k].has_key?(:func)) ? @fields_definition[5][k][:func].call(rec[k]) : rec[k]
-        rec[k] = {:name => @fields_definition[5][k][:name], :value => tmp} 
+#        rec[@fields_definition[5][k][:name]] = {:field_definition_number => k, :value => tmp} 
+        rec[@fields_definition[5][k][:name]] = tmp if(tmp != "na")
+        rec.delete(k)
       end
     end
   end
@@ -82,47 +85,26 @@ class FitFileReader
           parse(@record_definition,@record_def[rec_id][:def][i])
         end
         @record_def[rec_id][:rec_size] = @record_def[rec_id][:def].map{|r| r[:size]}.inject(:+)
-#        puts "definition"
-#        pp rec_id.to_s(16)
-        @rec_counts[rec_id]=0
-        if(rec_id == 5)
-          pp [rec_id, @record_def[rec_id]]
-        else
-#          pp [rec_id, @record_def[rec_id][:global_message_number]]
-        end
-#        puts "definition end"
       else
-#        puts "data"
-#        pp @rec_head[:normal_header].to_s(16)
         if(@record_def[@rec_head[:normal_header]] == nil)
-#          pp "no_record\n"
           break
         else
-#          pp @record_def[@rec_head[:normal_header]][:rec_size]
           if(@record_def[@rec_head[:normal_header]][:global_message_number] == 20)
             parse_record_field(@record_def[@rec_head[:normal_header]][:rec_size], @record_log)
           else
-            yomitobashi(@record_def[@rec_head[:normal_header]][:rec_size])
-            @rec_counts[@rec_head[:normal_header]] = @rec_counts[@rec_head[:normal_header]] + 1 
+            ignore_record(@record_def[@rec_head[:normal_header]][:rec_size])
           end
         end
       end
     end
-  pp @rec_counts
   end
-  def yomitobashi(size)
+  def ignore_record(size)
     @logfile.read(size)
   end
   def parse_record_field(size, log)  # for global message number 20
     a = @logfile.read(size).unpack("L<l<l<L<L<S<S<S<s<s<CCcCCCCC")
     tmp = Hash[*[253,0,1,5,29,2,6,7,9,33,3,4,13,30,43,44,45,46].zip(a).flatten(1)]
-#    tmp = Hash[*[:timestamp,:position_lat,:position_long,:distance,:accumulated_power,:altitude,:speed,:power,:grade,:calories,:heart_rate,:cadence,:temperature,:left_right_balance,:left_torque_effectiveness,:right_torque_effectiveness,:left_pedal_smoothness,:right_pedal_smoothness].zip(a).flatten(1)]
-    if(tmp[253] == 936822666)
-      calc_scale_offset(tmp)
-      pp tmp
-    end
-
-#    pp tmp[:position_long]
+    calc_scale_offset(tmp)
     log.push(tmp)
   end
   def parse(struct, result)
@@ -136,7 +118,18 @@ class FitFileReader
   def get_header(key)
     @header[key]
   end
-  def get_record(key)
-    @header[key]
+  def export_record(fields, file_name)
+    tmp = []
+    result = []
+    @record_log.each do |r|
+      fields.each do |f|
+        tmp << r[f] 
+      end
+      result << tmp if(tmp.compact != [])
+      tmp = []
+    end
+    File.open(file_name + ".json", "w") do |f|
+      JSON.dump(result,f)
+    end
   end
 end
