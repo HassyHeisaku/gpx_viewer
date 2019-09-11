@@ -10,7 +10,6 @@ class MakeView
     @log_root = log_root
     File.open(@log_root + "config.json", "r") do |f|
       @config = JSON.load(f,nil, {:symbolize_names => true})
-      pp @config
     end
     @erb = ERB.new(File.read("./template/template.erb", :encoding => 'utf-8'), nil, '-') 
     @json_data = {}
