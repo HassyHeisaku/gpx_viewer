@@ -125,7 +125,7 @@ class FitFileReader
       fields.each do |f|
         tmp << r[f] 
       end
-      result << tmp if(tmp.compact != [])
+      result << tmp if(tmp.compact.length == fields.length) #only when all data exists
       tmp = []
     end
     File.open(file_name + ".json", "w") do |f|

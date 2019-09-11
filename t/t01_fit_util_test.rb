@@ -19,7 +19,6 @@ class T01FitUtilTest < Test::TestBase
   end
 end
 T01FitUtilTest.start_test
-#94208 - 14
 __END__
 === test_can_read_header:header_size
 --- input read_header

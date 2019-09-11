@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title><%= @json_data[:title] %></title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.3.0/dist/leaflet.js"></script>
+    <script>
+function init() {
+  var map = L.map('mapcontainer', { zoomControl: false });
+  var mpoint = <%= @json_data[:midpoint] %>
+  map.setView(mpoint, 12);
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+  }).addTo(map);
+  var roadlatlons = <%= @json_data[:route_data] %>;
+  L.polyline(roadlatlons, { color: 'blue', weight: 5 }).addTo(map);
+  var startpoint = L.popup().setContent("startpoint");
+  var endpoint = L.popup().setContent("end point");
+  L.marker(<%= @json_data[:start] %>, { draggable: false }).bindPopup(startpoint).bindTooltip("start point").addTo(map);
+  L.marker(<%= @json_data[:end] %>, { draggable: false }).bindPopup(endpoint).bindTooltip("end point").addTo(map);
+  <% if @json_data[:images] %>
+      <% @json_data[:images].each do |img| %>
+      var tmp = "<% img[:description] %><br /><img src='<% img[:file_name] %>' width='500' height='375'>";
+      L.marker(<%= img[:point] %>, {draggable: fale}).bindPopup(tmp).bindTooltip("photo").addTo(map);
+      <% end %>
+  <% end %>
+}
+    </script>
+    <body onload="init()">
+      <div id="mapcontainer" style="width:400px;height:300px;"></div>
+    </body>
+</html>
