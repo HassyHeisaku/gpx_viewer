@@ -6,7 +6,7 @@ require 'make_view'
 
 class T02MakeViewTest < Test::TestBase
   def setup
-    @log_root = './data/'
+    @log_root = File.expand_path("./")
     @mv = MakeView.new(@log_root)
   end
   def created_json_has_keys(key)
