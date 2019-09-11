@@ -37,7 +37,7 @@ __END__
 --- input check_json_contents
 ["data1", :midpoint]
 --- expected
-[35.66574750468135, 139.4497050018981]
+[35.66321248188615, 139.44987083785236]
 === test_can_make_html
 --- input make_html
 "data1"

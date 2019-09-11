@@ -8,6 +8,10 @@ require 'erb'
 class MakeView
   def initialize(log_root)
     @log_root = log_root
+    File.open(@log_root + "config.json", "r") do |f|
+      @config = JSON.load(f,nil, {:symbolize_names => true})
+      pp @config
+    end
     @erb = ERB.new(File.read("./template/template.erb", :encoding => 'utf-8'), nil, '-') 
     @json_data = {}
     @html_data
@@ -15,6 +19,7 @@ class MakeView
   def read_log(dir_name)
     File.open(@log_root + dir_name + "/route.json", "r") do |f|
       @json_data[:route_data] = JSON.load(f)
+      @json_data[:route_data] = @json_data[:route_data].map{|v| ((v[0] < @config[:secure_area][0][0] && v[1] > @config[:secure_area][0][1]) && (v[0] > @config[:secure_area][1][0] && v[1] < @config[:secure_area][1][1]))? nil : v}.compact
       @json_data[:start] = @json_data[:route_data][0]
       @json_data[:end] = @json_data[:route_data][-1]
     end
