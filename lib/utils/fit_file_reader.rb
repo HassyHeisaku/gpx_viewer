@@ -19,7 +19,7 @@ class FitFileReader
     ]
     @header ={}
     @record_first_byte = [
-      [:normal_header , 'C',1], #0x40. Definition Header #<0x40 data header
+      [:header_first_byte , 'C',1], #0x40. Definition Header #<0x40 data header
     ]
     @record_header_structure = [
       [:reserved, 'C',1],
@@ -30,7 +30,7 @@ class FitFileReader
     ]
     @rec_head ={}
     @record_def ={}
-    @record_definition = [
+    @field_definition = [
       [:field_definition_number, 'C',1],
       [:size, 'C',1], #byte
       [:base_type, 'C',1],
@@ -75,24 +75,24 @@ class FitFileReader
     parse(@header_structure,@header)
     while(@logfile.eof != true) do
       parse(@record_first_byte,@rec_head)
-      if(@rec_head[:normal_header] & 0x40 !=0) # num[pos] !=0 will work also.
-        rec_id = @rec_head[:normal_header] ^ 0x40
+      if(@rec_head[:header_first_byte] & 0x40 !=0) # num[pos] !=0 will work also.
+        rec_id = @rec_head[:header_first_byte] ^ 0x40
         @record_def[rec_id] = {}
         parse(@record_header_structure,@record_def[rec_id])
         @record_def[rec_id][:def]=[]
         (0...@record_def[rec_id][:fields]).each do |i|
           @record_def[rec_id][:def][i] = {}
-          parse(@record_definition,@record_def[rec_id][:def][i])
+          parse(@field_definition,@record_def[rec_id][:def][i])
         end
         @record_def[rec_id][:rec_size] = @record_def[rec_id][:def].map{|r| r[:size]}.inject(:+)
       else
-        if(@record_def[@rec_head[:normal_header]] == nil)
+        if(@record_def[@rec_head[:header_first_byte]] == nil)
           break
         else
-          if(@record_def[@rec_head[:normal_header]][:global_message_number] == 20)
-            parse_record_field(@record_def[@rec_head[:normal_header]][:rec_size], @record_log)
+          if(@record_def[@rec_head[:header_first_byte]][:global_message_number] == 20)
+            parse_record_field(@record_def[@rec_head[:header_first_byte]][:rec_size], @record_log)
           else
-            ignore_record(@record_def[@rec_head[:normal_header]][:rec_size])
+            ignore_record(@record_def[@rec_head[:header_first_byte]][:rec_size])
           end
         end
       end

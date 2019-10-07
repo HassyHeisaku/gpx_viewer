@@ -5,28 +5,32 @@ require 'pp'
 require 'utils/fit_file_reader'
 
 class T01FitUtilTest < Test::TestBase
-  def setup
-#    @root_path = Dir.pwd
-    @logfile_name = './private_data/fit_log_file/irohazaka_renkouji_route.fit'
-    @ffr = FitFileReader.new(@logfile_name)
-  end
-  def read_header(key)
+  def read_header(arg)
+    logname, key = arg
+    @ffr = FitFileReader.new(logname)
     @ffr.get_header(key)
   end
-  def extract_to_json(keys)
-    @ffr.export_record(keys,"./private_data/json_file/test01")
-    return File.exist?("./private_data/json_file/test01.json")
+  def all_process(args)
+    logname, keys, filename = *args
+    @ffr = FitFileReader.new(logname)
+    @ffr.export_record(keys,filename)
+    return File.exist?("#{filename}.json")
   end
 end
 T01FitUtilTest.start_test
 __END__
 === test_can_read_header:header_size
 --- input read_header
-:header_size
+['./private_data/fit_log_file/irohazaka_renkouji_route.fit', :header_size]
 --- expected
 0x0e
 === test_can_export_record:lat,long
---- input extract_to_json
-[:position_lat, :position_long]
+--- input all_process
+['./private_data/fit_log_file/irohazaka_renkouji_route.fit',[:position_lat, :position_long], "./private_data/json_file/test01"]
+--- expected
+true
+=== test_all_process:
+--- input all_process
+["./private_data/fit_log_file/yamanakako_route.fit" , [:position_lat, :position_long], "./private_data/json_file/test02"]
 --- expected
 true
