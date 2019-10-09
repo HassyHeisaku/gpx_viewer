@@ -22,7 +22,7 @@ class T02MakeViewTest < Test::TestBase
   end
   def make_html(key)
     @mv.read_log(key)
-    @mv.make_html
+    @mv.make_html(true)
   end
 
 end
@@ -30,16 +30,16 @@ T02MakeViewTest.start_test
 __END__
 === test_can_make_json
 --- input created_json_has_keys
-"data1"
+"route1"
 --- expected
 [:title, :midpoint, :route_data, :start, :end].sort
 === test_json_contents
 --- input check_json_contents
-["data1", :midpoint]
+["route1", :midpoint]
 --- expected
 [35.66321248188615, 139.44987083785236]
 === test_can_make_html
 --- input make_html
-"data1"
+"route1"
 --- expected
 true

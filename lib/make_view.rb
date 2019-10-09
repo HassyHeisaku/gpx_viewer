@@ -41,11 +41,13 @@ class MakeView
   def get_json
     return @json_data
   end
-  def make_html
+  def make_html(option=nil)
     @html_data = @erb.result(binding)
-#    File.open("tmp.html","w") do |f|
-#      f.puts(@html_data)
-#    end
+    if(option!=nil)
+      File.open("tmp.html","w") do |f|
+        f.puts(@html_data)
+      end
+    end
     true
   end
   def get_html
