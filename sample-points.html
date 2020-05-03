@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>sample</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+  </head>
+    <body onload="init()">
+    <script>
+function init() {
+  var map = L.map('mapcontainer', { zoomControl: true });
+  var mpoint = [35.66321248188615, 139.44987083785236]
+  map.setView(mpoint, 12);
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+    attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>"
+  }).addTo(map);
+  var pointa = L.popup().setContent("hoge");
+  var pointb = L.popup().setContent("huga");
+  var pointc = L.popup().setContent("hara");
+  L.marker([35.685702469199896, 139.411281645298], { draggable: false }).bindPopup(pointa).bindTooltip("point A").addTo(map);
+  L.marker([35.715900785028934, 139.4109000172466], { draggable: false }).bindPopup(pointb).bindTooltip("point B").addTo(map);
+  L.marker([35.7006303,139.416106], { draggable: false }).bindPopup(pointc).bindTooltip("Bic").addTo(map);
+}
+    </script>
+      <div id="mapcontainer" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+    </body>
+</html>
